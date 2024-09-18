@@ -1,0 +1,87 @@
+.timeline-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    width: 85%;
+    max-width: 90%;
+    scroll-behavior: smooth;
+    position: relative;
+    height: 25vh;
+    background-color: #fff;
+    border-radius: 2vh;
+}
+
+.timeline-marker-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 9vh;
+}
+
+.thumbnail-container {
+    height: 20vh;
+    width: 100%;
+}
+
+.thumbnail-button {
+    position: absolute;
+    height: 15vh;
+    object-fit: scale-down;
+    border-right: 4px solid #ddd;
+    background-size: contain;
+    /* Fit image within the div */
+    background-repeat: no-repeat;
+    background-position: center;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 1vh;
+}
+
+.current-time-indicator {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background-color: red;
+    z-index: 10;
+}
+
+.time-marker {
+    top: 0;
+    left: 100;
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    background-color: #999;
+}
+
+.time-marker.major {
+    min-height: 4px !important;
+    height: 4vh;
+}
+
+.time-marker.minor {
+    min-height: 2px !important;
+    height: 2vh;
+}
+
+.time-marker-label {
+    position: absolute;
+    top: 5vh;
+    left: 100%;
+    transform: translateX(-50%);
+    font-size: 0.8em;
+    color: #666;
+}
+
+
+/* Hiding the scrollbar for Webkit browsers (Chrome, Safari, Edge) */
+.timeline-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* For Firefox */
+.timeline-container {
+    scrollbar-width: none;
+}
