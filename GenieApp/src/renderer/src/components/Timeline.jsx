@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback,memo } from 'react';
 import './Timeline.css';
 
-const Timeline = ({ reactPlayerRef, projectURL }) => {
+const Timeline = ({ reactPlayerRef, currentVideoDir, thumbnailsGenerated }) => {
     const [duration, setDuration] = useState(60);
     const [currentTime, setCurrentTime] = useState(0);
+    const [thumbnails, setThumbnails] = useState([]);
     const pixelsPerSecond = 30;
     const totalWidth = duration * pixelsPerSecond;
     const majorMarkerInterval = 5; // seconds
@@ -13,7 +14,7 @@ const Timeline = ({ reactPlayerRef, projectURL }) => {
     useEffect(() => {
         const player = reactPlayerRef.current;
 
-        if (player) {
+        if (player) { 
             const updateInterval = setInterval(() => {
                 setCurrentTime(player.getCurrentTime());
             }, 50);
@@ -25,40 +26,43 @@ const Timeline = ({ reactPlayerRef, projectURL }) => {
         }
     }, [reactPlayerRef]);
 
-
-    // Listen for video duration change
     useEffect(() => {
         const player = reactPlayerRef.current;
 
         const updateDuration = () => {
-            const videoDuration = player.getDuration();
+        const videoDuration = player?.getDuration();
+        if (videoDuration) {
             setDuration(videoDuration);
+        }
         };
 
-        // Update the duration when the video is loaded
         if (player) {
-            updateDuration();
-
-            // Optionally, if the video changes, listen for duration changes dynamically
-            player.getInternalPlayer().addEventListener('loadedmetadata', updateDuration);
+        updateDuration();
+        const internalPlayer = player.getInternalPlayer();
+        
+        if (internalPlayer) {
+            internalPlayer.addEventListener('loadedmetadata', updateDuration);
 
             return () => {
-                player.getInternalPlayer().removeEventListener('loadedmetadata', updateDuration);
+            // Check if internalPlayer still exists before removing the listener
+            if (internalPlayer) {
+                internalPlayer.removeEventListener('loadedmetadata', updateDuration);
+            }
             };
         }
-    }, [reactPlayerRef]);
-
-
-    const handlePlayPause = () => {
-        if (reactPlayerIsPlaying) {
-            reactPlayerSetIsPlaying(false);
         }
-        else {
-            reactPlayerSetIsPlaying(true);
-        }
-        // setIsPlaying(!isPlaying);
-    };
+    }, [reactPlayerRef, currentVideoDir]);
 
+    // Generate thumbnails when projectURL or thumbnailsGenerated changes
+    useEffect(() => {
+        if (thumbnailsGenerated) {
+            const thumbnailTimes = [];
+            for (let time = 0; time <= duration; time += majorMarkerInterval) {
+                thumbnailTimes.push(time);
+            }
+            setThumbnails(thumbnailTimes);
+        }
+    }, [currentVideoDir, duration, majorMarkerInterval,thumbnailsGenerated]);
 
     const formatTime = (time) => {
         const minutes = Math.floor(time / 60);
@@ -66,14 +70,15 @@ const Timeline = ({ reactPlayerRef, projectURL }) => {
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     };
 
-    const getThumbnailURL = (timeIndex) => {
-        return `${projectURL}/thumbnails/${timeIndex}.png`;
-    };
+    const getThumbnailURL = useCallback((timeIndex) => {
+        if (!currentVideoDir) return '';
+        return `${currentVideoDir}/thumbnails/${timeIndex}.png`;
+        
+    }, [currentVideoDir]);
 
     const handleTimeChange = (timeIndex) => {
         if (reactPlayerRef.current) {
             const fraction = timeIndex / duration;
-            // Check if fraction is finite
             if (isFinite(fraction)) {
                 reactPlayerRef.current.seekTo(fraction, "fraction");
             } else {
@@ -82,11 +87,10 @@ const Timeline = ({ reactPlayerRef, projectURL }) => {
         }
     };
 
-    const Thumbnail = ({ timeIndex, index }) => {
+    const Thumbnail = memo(({ timeIndex, index }) => {
         const [imageError, setImageError] = useState(false);
 
         const handleClick = () => {
-            console.log('Thumbnail clicked:', timeIndex);
             handleTimeChange(timeIndex);
         };
 
@@ -104,16 +108,7 @@ const Timeline = ({ reactPlayerRef, projectURL }) => {
                 {imageError && <span>Thumbnail {index + 1}</span>}
             </button>
         );
-    };
-
-
-
-
-    // Generate an array of time indices for thumbnails
-    const thumbnailTimes = [];
-    for (let time = 0; time <= duration; time += majorMarkerInterval) {
-        thumbnailTimes.push(time);
-    }
+    });
 
     return (
         <div className="timeline-container">
@@ -121,7 +116,6 @@ const Timeline = ({ reactPlayerRef, projectURL }) => {
                 className="timeline-marker-wrapper"
                 style={{ width: `${totalWidth + 2 * leftStarting}px` }}
             >
-                {/* Time markers */}
                 {Array.from({ length: Math.ceil(duration / minorMarkerInterval) + 1 }, (_, i) => {
                     const isMajorMarker = i % (majorMarkerInterval / minorMarkerInterval) === 0;
                     return (
@@ -139,13 +133,11 @@ const Timeline = ({ reactPlayerRef, projectURL }) => {
                     );
                 })}
             </div>
-            {/* Thumbnails */}
             <div className="thumbnail-container">
-                {thumbnailTimes.map((timeIndex, index) => (
+                {thumbnails.map((timeIndex, index) => (
                     <Thumbnail key={index} timeIndex={timeIndex} index={index} />
                 ))}
             </div>
-            {/* Current time indicator */}
             <div
                 className="current-time-indicator"
                 style={{
@@ -157,3 +149,4 @@ const Timeline = ({ reactPlayerRef, projectURL }) => {
 };
 
 export default Timeline;
+

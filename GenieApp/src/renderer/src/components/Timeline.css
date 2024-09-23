@@ -2,8 +2,7 @@
     overflow-x: auto;
     overflow-y: hidden;
     white-space: nowrap;
-    width: 85%;
-    max-width: 90%;
+    width: 100%;
     scroll-behavior: smooth;
     position: relative;
     height: 25vh;

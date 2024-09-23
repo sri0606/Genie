@@ -5,14 +5,35 @@ import axios from 'axios';
 import path from 'path';
 import ffmpeg from "fluent-ffmpeg";
 import ffprobeStatic from "ffprobe-static";
+import express from "express";
 import fs from 'fs';
 import VideoEditor from './autove.js'; // Load the VideoEditor class
 
-
+const projectResourcesServer = express();
+const projectResourcesDir = path.join(app.getPath('userData'), 'projects');
 // Create an instance of the VideoEditor
-const videoEditorInstance = new VideoEditor();
+const videoEditorInstance = new VideoEditor(projectResourcesDir);
 
-function createWindow() {
+//Serve media files from the media directory
+projectResourcesServer.use('/media', express.static(projectResourcesDir));
+
+// Start the Express server on a specific port
+const port = process.env.MEDIA_PORT || 3000;
+let server = projectResourcesServer.listen(port, () => {
+    console.log(`projectResourcesServer server is running at http://localhost:${port}/media`);
+});
+
+const projectResourcesEndpoint = `http://localhost:${port}/media`
+
+// Handle graceful shutdown for Electron app and media server
+function shutdownServer() {
+    console.log('Shutting down media server...');
+    server.close(() => {
+        console.log('Media server stopped.');
+        app.quit();  // Quit the Electron app after the server stops
+    });
+}
+function createWindow(projectId = null) {
   const mainWindow = new BrowserWindow({
     title: 'Genie',
     icon: path.join(__dirname, 'genie.webp'),
@@ -20,7 +41,6 @@ function createWindow() {
     height: 670,
     show: false,
     autoHideMenuBar: true,
-    // ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -36,14 +56,26 @@ function createWindow() {
     return { action: 'deny' };
   });
 
+  // Check if it's dev mode or production and load the appropriate URL
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
+    if (projectId) {
+      mainWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}?projectId=${projectId}`);
+    } else {
+      mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
+    }
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+    if (projectId) {
+      mainWindow.loadFile(join(__dirname, '../renderer/index.html'), {
+        query: { projectId: projectId },
+      });
+    } else {
+      mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+    }
   }
 
   return mainWindow;
 }
+
 
 
 app.whenReady().then(async () => {
@@ -69,7 +101,20 @@ app.whenReady().then(async () => {
   }
 });
 
+// Handle process signals (e.g., CTRL+C or app close)
+process.on('SIGINT', () => {
+    console.log('Received SIGINT. Initiating shutdown...');
+    shutdownServer();
+});
+
+process.on('SIGTERM', () => {
+    console.log('Received SIGTERM. Initiating shutdown...');
+    shutdownServer();
+});
+
+
 app.on('window-all-closed', async () => {
+  shutdownServer();
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -77,6 +122,75 @@ app.on('window-all-closed', async () => {
 
 
 // IPC handlers
+ipcMain.handle('create-new-project-id',  () => {
+  const timestamp = Date.now(); // Current time in milliseconds
+  const randomComponent = Math.random().toString(36).substr(2, 5); // Random string
+  const newProjectId = `${timestamp}-${randomComponent}`; // Unique ID based on timestamp and random string
+  // Save the new project with this ID to your database or storage
+  return newProjectId;
+});
+
+  ipcMain.handle('get-projects', async () => {
+  try {
+    const directories = await fs.promises.readdir(projectResourcesDir, { withFileTypes: true });
+    // Filter to only include directories
+    const projects = directories.filter(dirent => dirent.isDirectory()).map(dirent => ({
+      id: dirent.name,
+      name: dirent.name
+    }));
+    return projects;
+  } catch (error) {
+    console.error('Error reading project directories:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('get-videos-in-project', async (event, projectId) => {
+  const projectDir = path.join(projectResourcesDir, projectId); // Construct the project directory path
+  try {
+    const directories = await fs.promises.readdir(projectDir, { withFileTypes: true });
+
+    const videos = [];
+
+    // Iterate through each directory to find video subdirectories
+    for (const dirent of directories) {
+      if (dirent.isDirectory()) {
+        const videoDir = path.join(projectDir, dirent.name); // Path to the video subdirectory
+        const files = await fs.promises.readdir(videoDir, { withFileTypes: true });
+
+        // Look for the video file in the subdirectory
+        const videoFile = files.find(file => file.isFile() && /\.(mp4|webm|ogg)$/.test(file.name));
+
+        if (videoFile) {
+          videos.push({
+            name: videoFile.name,
+            url: `http://localhost:3000/media/${projectId}/${dirent.name}/${videoFile.name}`,
+            dirLocation: `http://localhost:3000/media/${projectId}/${dirent.name}`
+          });
+        }
+      }
+    }
+    return videos;
+  } catch (error) {
+    console.error('Error reading video files:', error);
+    return [];
+  }
+});
+
+
+ipcMain.handle('open-project', (event, projectId) => {
+  // Create a new project window
+  const projectWindow = createWindow(projectId);
+
+  // Close the current window (which might be homepage or another project)
+  const currentWindow = BrowserWindow.getFocusedWindow();
+  if (currentWindow) {
+    currentWindow.close();
+  }
+});
+
+
+
 ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
@@ -88,10 +202,13 @@ ipcMain.handle('open-file-dialog', async () => {
   return null;
 });
 
-ipcMain.handle('get-app-dir', () => {
-  return path.join("C:/Users/srira/Projects/AutoVE/ElectronGUI", 'mediaDirectory');
+ipcMain.handle('get-project-resources-dir', () => {
+  return projectResourcesDir;
 });
 
+ipcMain.handle('get-project-resources-endpoint', () => {
+  return projectResourcesEndpoint;
+});
 // Ensure FFmpeg uses the ffprobe-static binary
 ffmpeg.setFfprobePath(ffprobeStatic.path);
 
@@ -137,14 +254,6 @@ ipcMain.handle('generate-thumbnails', async (event, videoPath) => {
   } catch (error) {
     throw new Error(`Error generating thumbnails: ${error.message}`);
   }
-});
-
-
-// Handle the video upload and update the path
-ipcMain.on('video-uploaded', (event, videoPath) => {
-  console.log('Video uploaded: ', videoPath);
-  // Update the path of the videoEditorInstance
-  videoEditorInstance.current_path = videoPath;
 });
 
 // Handle user input and execute the function
