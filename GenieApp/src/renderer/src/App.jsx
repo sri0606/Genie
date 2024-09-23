@@ -1,11 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import ProjectPage from './components/Project';
+import Homepage from "./components/HomePage";
+import ProjectPage from './components/ProjectPage';
 
 export default function App() {
+  const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [projectsResourcesDir, setProjectsResourcesDir] = useState('');
+  const [projectsResourcesEndpoint, setProjectsResourcesEndpoint] = useState('');
+
+  // Fetch resources directory and endpoint when the app mounts
+  useEffect(() => {
+    const fetchAppData = async () => {
+      setProjectsResourcesDir(await window.api.getProjectResourcesDir());
+      setProjectsResourcesEndpoint(await window.api.getProjectResourcesEndpoint());
+    };
+
+    fetchAppData();
+
+    // Check for projectId in the query params
+    const searchParams = new URLSearchParams(window.location.search);
+    const projectIdFromURL = searchParams.get('projectId');
+
+    if (projectIdFromURL) {
+      setCurrentProjectId(projectIdFromURL);
+    }
+  }, []);
+
+  // Decide which component to render based on the presence of projectId
+  if (currentProjectId) {
+    return (
+      <ProjectPage 
+        projectId={currentProjectId}
+        projectURL={window.api.pathJoin(projectsResourcesEndpoint, currentProjectId)}
+        projectDataDir={window.api.pathJoin(projectsResourcesDir, currentProjectId)}
+      />
+    );
+  }
 
   return (
-    <>
-      <ProjectPage></ProjectPage>
-    </>
+    <Homepage 
+      appDataDirectory={projectsResourcesDir}
+    />
   );
 }
+
