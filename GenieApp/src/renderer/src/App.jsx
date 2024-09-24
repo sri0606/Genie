@@ -29,8 +29,9 @@ export default function App() {
   if (currentProjectId) {
     return (
       <ProjectPage 
+        key = {currentProjectId}
         projectId={currentProjectId}
-        projectURL={window.api.pathJoin(projectsResourcesEndpoint, currentProjectId)}
+        projectURL={window.api.pathJoinURL(projectsResourcesEndpoint, currentProjectId)}
         projectDataDir={window.api.pathJoin(projectsResourcesDir, currentProjectId)}
       />
     );

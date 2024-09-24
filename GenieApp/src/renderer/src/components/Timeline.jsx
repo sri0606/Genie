@@ -149,4 +149,3 @@ const Timeline = ({ reactPlayerRef, currentVideoDir, thumbnailsGenerated }) => {
 };
 
 export default Timeline;
-

@@ -38,7 +38,7 @@ const api = {
   receiveBotResponse: (callback) => electronAPI.ipcRenderer.on('bot-response', (event, response) => callback(response)),
   removeAllListeners: (channel) => electronAPI.ipcRenderer.removeAllListeners(channel),
   sendUserInput: (message) => electronAPI.ipcRenderer.invoke('user-input', message),
-
+  pathJoinURL:(url,...vals)=> url + '/' + vals.join('/'),
   handleUpload: async (projectDataDir, projectURL) => {
     const filePath = await api.openFileDialog();
     console.log('Selected file path:', filePath);
@@ -53,11 +53,11 @@ const api = {
       const destinationPath = api.pathJoin(workingDir, fileName);
       await api.copyFile(filePath, destinationPath);
       console.log('File copied to:', destinationPath);
-
+      console.log("find vide here",api.pathJoinURL(projectURL, fileBaseName, fileName))
       const newVideo = { 
         name: fileName, 
-        url: api.pathJoin(projectURL, fileBaseName, fileName), 
-        dirLocation: api.pathJoin(projectURL, fileBaseName) 
+        url: api.pathJoinURL(projectURL, fileBaseName, fileName), 
+        dirLocation: api.pathJoinURL(projectURL, fileBaseName) 
       };
       return {newVideo,destinationPath};
     }

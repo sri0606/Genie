@@ -1,19 +1,29 @@
-import React, { useState, useRef, useEffect , useCallback} from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactPlayer from 'react-player';
+import Timeline from './Timeline';
 import Chatbox from './Chatbox';
-import Timeline from './Timeline'; 
 import './ProjectPage.css';
 
 function VideoControls({ video, thumbnailsGenerated }) {
   const playerRef = useRef(null);
 
-  console.log('VideoControls render:', { video, thumbnailsGenerated });
+  useEffect(() => {
+    // Reset player when video changes
+    if (playerRef.current) {
+      playerRef.current.seekTo(0);
+    }
+  }, [video]);
+
+  if (!video) {
+    return <div className="no-video">No video selected. Please upload a video.</div>;
+  }
 
   return (
     <>
-      {video ? (
+     {video ? (
         <div className="video-viewport">
           <ReactPlayer
+            key={video.url}
             ref={playerRef}
             url={video.url}
             controls={true}
@@ -32,21 +42,24 @@ function VideoControls({ video, thumbnailsGenerated }) {
     </>
   );
 }
-
 export default function ProjectPage({ projectId, projectURL, projectDataDir }) {
   const [videos, setVideos] = useState([]);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [thumbnailsGenerated, setThumbnailsGenerated] = useState(false);
-  const [renderKey, setRenderKey] = useState(0);
 
   useEffect(() => {
     const loadVideosForProject = async (projectId) => {
       const loadedVideos = await window.api.getVideosInProject(projectId);
       console.log('Loaded videos:', loadedVideos);
-      setVideos(loadedVideos);
-      if (loadedVideos.length > 0) {
-        setCurrentVideo(loadedVideos[0]);
+      const normalizedVideos = loadedVideos.map(video => ({
+        ...video,
+        url: video.url,
+        dirLocation: video.dirLocation
+      }));
+      setVideos(normalizedVideos);
+      if (normalizedVideos.length > 0) {
+        setCurrentVideo(normalizedVideos[0]);
         setThumbnailsGenerated(true);
       }
     };
@@ -56,13 +69,11 @@ export default function ProjectPage({ projectId, projectURL, projectDataDir }) {
 
   const generateThumbnails = useCallback(async (videoPath) => {
     try {
-      console.log('Generating thumbnails for:', videoPath);
       const result = await window.api.generateThumbnails(videoPath);
-      console.log('Thumbnail generation result:', result);
       setThumbnailsGenerated(true);
-      setRenderKey(prevKey => prevKey + 1);  // Force re-render
     } catch (error) {
       console.error('Error generating thumbnails:', error);
+      setThumbnailsGenerated(false);
     }
   }, []);
 
@@ -70,15 +81,16 @@ export default function ProjectPage({ projectId, projectURL, projectDataDir }) {
     try {
       setIsLoading(true);
       setThumbnailsGenerated(false);
-      console.log('Starting upload...');
       const { newVideo, destinationPath } = await window.api.handleUpload(projectDataDir, projectURL);
-      console.log('Upload complete:', { newVideo, destinationPath });
-      
       if (newVideo) {
-        setVideos(prevVideos => [...prevVideos, newVideo]);
-        setCurrentVideo(newVideo);
+        const normalizedNewVideo = {
+          ...newVideo,
+          url: newVideo.url,
+          dirLocation: newVideo.dirLocation
+        };
+        setVideos(prevVideos => [...prevVideos, normalizedNewVideo]);
+        setCurrentVideo({...normalizedNewVideo});
         setIsLoading(false);
-        setRenderKey(prevKey => prevKey + 1);  // Force re-render
 
         // Generate thumbnails after upload
         await generateThumbnails(destinationPath);
@@ -93,19 +105,11 @@ export default function ProjectPage({ projectId, projectURL, projectDataDir }) {
     console.log('Video selected:', video);
     setCurrentVideo(video);
     setThumbnailsGenerated(true);
-    setRenderKey(prevKey => prevKey + 1);  // Force re-render
   }, []);
 
   const onBack = useCallback(() => {
     window.api.openProject(null);
   }, []);
-
-  console.log('ProjectPage render:', { 
-    currentVideo, 
-    thumbnailsGenerated, 
-    videosCount: videos.length,
-    renderKey 
-  });
 
   return (
     <div className="project-page">
@@ -118,7 +122,7 @@ export default function ProjectPage({ projectId, projectURL, projectDataDir }) {
           <h3>Uploaded Videos</h3>
           <ul>
             {videos.map((video, index) => (
-              <li key={index}>
+              <li key={video.url}>
                 <button onClick={() => handleVideoSelect(video)}>
                   {video.name}
                 </button>
@@ -130,11 +134,12 @@ export default function ProjectPage({ projectId, projectURL, projectDataDir }) {
       
       <div className='main-content-layout'>
         <div className='left-column'>
-          <VideoControls
-            key={`video-controls-${renderKey}`}
+         <VideoControls
+            key={currentVideo ? currentVideo.url : 'no-video'}
             video={currentVideo}
             thumbnailsGenerated={thumbnailsGenerated}
-          />
+          /> 
+
         </div>
         <div className="right-column">
           <Chatbox />
@@ -143,3 +148,4 @@ export default function ProjectPage({ projectId, projectURL, projectDataDir }) {
     </div>
   );
 }
+
