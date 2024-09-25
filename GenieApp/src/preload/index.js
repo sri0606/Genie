@@ -37,7 +37,8 @@ const api = {
   },
   receiveBotResponse: (callback) => electronAPI.ipcRenderer.on('bot-response', (event, response) => callback(response)),
   removeAllListeners: (channel) => electronAPI.ipcRenderer.removeAllListeners(channel),
-  sendUserInput: (message) => electronAPI.ipcRenderer.invoke('user-input', message),
+  sendUserInput: (message,input_path, output_path) => electronAPI.ipcRenderer.invoke('user-input', message, input_path, output_path),
+  executeFunction: (extractedResults,input_path,output_path) => electronAPI.ipcRenderer.invoke('execute',extractedResults,input_path,output_path),
   pathJoinURL:(url,...vals)=> url + '/' + vals.join('/'),
   handleUpload: async (projectDataDir, projectURL) => {
     const filePath = await api.openFileDialog();
@@ -57,11 +58,15 @@ const api = {
       const newVideo = { 
         name: fileName, 
         url: api.pathJoinURL(projectURL, fileBaseName, fileName), 
-        dirLocation: api.pathJoinURL(projectURL, fileBaseName) 
+        dirLocation: api.pathJoin(projectDataDir, fileBaseName),
+        dirURL : api.pathJoinURL(projectURL, fileBaseName),
+        numEdits: 0
       };
       return {newVideo,destinationPath};
     }
   },
+  onUploadMenuClicked: (callback) => electronAPI.ipcRenderer.on('upload-menu-clicked', () => callback()),
+  onGoToHomeClicked : (callback) => electronAPI.ipcRenderer.on('go-to-home-page',()=> callback()),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

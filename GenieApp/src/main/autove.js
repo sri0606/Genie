@@ -1,163 +1,69 @@
 import ffmpeg from "fluent-ffmpeg";
 import ffprobeStatic from "ffprobe-static";
-import fs from "fs";
-import path from "path";
 
 class VideoEditor {
-    constructor(mediaDir) {
-        this.mediaDir = mediaDir;
+    constructor() {
         ffmpeg.setFfprobePath(ffprobeStatic.path);
     }
 
-    resize_video(width, height, output_path) {
+    async processVideo(ffmpegCommand, successMessage, errorMessage) {
         return new Promise((resolve, reject) => {
-            ffmpeg(this.current_path)
-                .size(`${width}x${height}`)
-                .output(output_path)
+            ffmpegCommand
                 .on('end', () => {
-                    console.log('Video resized successfully');
-                    resolve();
+                    console.log(successMessage);
+                    resolve({ message: successMessage, status: 'success' });
                 })
                 .on('error', (err) => {
-                    console.error('Error resizing video:', err);
-                    reject(err);
+                    console.error(errorMessage, err);
+                    reject({ message: errorMessage, error: err });
                 })
                 .run();
         });
     }
 
-    convert_video_format(format, output_path) {
-        return new Promise((resolve, reject) => {
-            ffmpeg(this.current_path)
-                .toFormat(format)
-                .output(output_path)
-                .on('end', () => {
-                    console.log(`Video converted to ${format} successfully`);
-                    resolve();
-                })
-                .on('error', (err) => {
-                    console.error('Error converting video:', err);
-                    reject(err);
-                })
-                .run();
-        });
+    resize_video(width, height, input_path, output_path) {
+        const command = ffmpeg(input_path).size(`${width}x${height}`).output(output_path);
+        return this.processVideo(command, `Video resized successfully to ${width}x${height}px`, 'Error resizing video');
     }
 
-    open_video(video_path) {
-        if (fs.existsSync(video_path)) {
-            this.current_path = video_path;
-            console.log("Video opened:", video_path);
-        } else {
-            throw new Error("Video file not found");
-        }
+    convert_video_format(format, input_path, output_path) {
+        const command = ffmpeg(input_path).toFormat(format).output(output_path);
+        return this.processVideo(command, `Video converted to ${format} successfully`, 'Error converting video');
     }
 
-    extract_audio_from_video(output_path) {
-        return new Promise((resolve, reject) => {
-            ffmpeg(this.current_path)
-                .noVideo()
-                .audioCodec('libmp3lame')
-                .output(output_path)
-                .on('end', () => {
-                    console.log('Audio extracted successfully');
-                    resolve();
-                })
-                .on('error', (err) => {
-                    console.error('Error extracting audio:', err);
-                    reject(err);
-                })
-                .run();
-        });
+    extract_audio_from_video(input_path, output_path) {
+        const command = ffmpeg(input_path).noVideo().audioCodec('libmp3lame').output(output_path);
+        return this.processVideo(command, 'Audio extracted successfully', 'Error extracting audio');
     }
 
-    trim_video(start_time, end_time, output_path) {
-        return new Promise((resolve, reject) => {
-            ffmpeg(this.current_path)
-                .setStartTime(start_time)
-                .setDuration(end_time - start_time)
-                .output(output_path)
-                .on('end', () => {
-                    console.log('Video trimmed successfully');
-                    resolve();
-                })
-                .on('error', (err) => {
-                    console.error('Error trimming video:', err);
-                    reject(err);
-                })
-                .run();
-        });
+    trim_video(start_time, end_time, input_path, output_path) {
+        const command = ffmpeg(input_path).setStartTime(start_time).setDuration(end_time - start_time).output(output_path);
+        return this.processVideo(command, 'Video trimmed successfully', 'Error trimming video');
     }
 
-    compress_video(output_path, preset = 'medium') {
-        return new Promise((resolve, reject) => {
-            ffmpeg(this.current_path)
-                .videoCodec('libx264')
-                .preset(preset)
-                .output(output_path)
-                .on('end', () => {
-                    console.log('Video compressed successfully');
-                    resolve();
-                })
-                .on('error', (err) => {
-                    console.error('Error compressing video:', err);
-                    reject(err);
-                })
-                .run();
-        });
+    compress_video(input_path, output_path, preset = 'medium') {
+        const command = ffmpeg(input_path).videoCodec('libx264').preset(preset).output(output_path);
+        return this.processVideo(command, 'Video compressed successfully', 'Error compressing video');
     }
 
-    apply_basic_color_correction(brightness = 0, contrast = 0, saturation = 1, output_path) {
-        return new Promise((resolve, reject) => {
-            ffmpeg(this.current_path)
-                .videoFilters([
-                    `eq=brightness=${brightness}:contrast=${contrast}:saturation=${saturation}`
-                ])
-                .output(output_path)
-                .on('end', () => {
-                    console.log('Color correction applied successfully');
-                    resolve();
-                })
-                .on('error', (err) => {
-                    console.error('Error applying color correction:', err);
-                    reject(err);
-                })
-                .run();
-        });
+    apply_basic_color_correction(brightness = 0, contrast = 0, saturation = 1, input_path, output_path) {
+        const command = ffmpeg(input_path).videoFilters([
+            `eq=brightness=${brightness}:contrast=${contrast}:saturation=${saturation}`
+        ]).output(output_path);
+        return this.processVideo(command, 'Color correction applied successfully', 'Error applying color correction');
     }
 
-    change_aspect_ratio(aspect_ratio, output_path) {
-        return new Promise((resolve, reject) => {
-            ffmpeg(this.current_path)
-                .aspect(aspect_ratio)
-                .output(output_path)
-                .on('end', () => {
-                    console.log('Aspect ratio changed successfully');
-                    resolve();
-                })
-                .on('error', (err) => {
-                    console.error('Error changing aspect ratio:', err);
-                    reject(err);
-                })
-                .run();
-        });
+    change_aspect_ratio(aspect_ratio, input_path, output_path) {
+        const command = ffmpeg(input_path).aspect(aspect_ratio).output(output_path);
+        return this.processVideo(command, 'Aspect ratio changed successfully', 'Error changing aspect ratio');
     }
 
-    apply_slow_motion(speed = 0.5, output_path) {
-        return new Promise((resolve, reject) => {
-            ffmpeg(this.current_path)
-                .videoFilters(`setpts=${1/speed}*PTS`)
-                .audioFilters(`atempo=${speed}`)
-                .output(output_path)
-                .on('end', () => {
-                    console.log('Slow motion applied successfully');
-                    resolve();
-                })
-                .on('error', (err) => {
-                    console.error('Error applying slow motion:', err);
-                    reject(err);
-                })
-                .run();
-        });
+    apply_slow_motion(speed = 0.5, input_path, output_path) {
+        const command = ffmpeg(input_path)
+            .videoFilters(`setpts=${1 / speed}*PTS`)
+            .audioFilters(`atempo=${speed}`)
+            .output(output_path);
+        return this.processVideo(command, 'Slow motion applied successfully', 'Error applying slow motion');
     }
 }
 

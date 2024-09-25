@@ -1,7 +1,7 @@
 .chatbox {
     position: relative;
     width: 100%;
-    height: 99%;
+    height: 100%;
     border: 1px solid #000000;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     display: flex;
@@ -20,10 +20,10 @@
 .chatbox-message {
     display: inline-block;
     margin-bottom: 1vh;
-    border-radius: 4vh;
+    border-radius: 2vh;
     box-sizing: border-box;
     background-color: #2f2d2d;
-    padding: 1vw;
+    padding: 1vh;
     word-wrap: break-word;
     /* max-width: 90%; */
     /* Ensure long words break to the next line */
@@ -55,11 +55,139 @@
 }
 
 .send-btn {
-    background-color: #4CAF50;
+    background-color: #007bff;
     color: white;
     border: none;
-    width: 4%;
-    border-radius: 4vh;
-    padding: 1vh;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    font-size: 18px;
+    transition: background-color 0.2s;
+}
+
+.send-btn:hover {
+    background-color: #0056b3;
+}
+
+.bot-message {
+    border-radius: 2vh;
+    font-size: small;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow-x: hidden;
+}
+
+.args-list {
+    margin-top: 12px;
+}
+
+.arg-item {
+    margin-bottom: 8px;
+}
+
+.arg-item label {
+    display: inline-block;
+    width: 100px;
+    font-weight: bold;
+}
+
+.arg-item input {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.confirm-btn, .cancel-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+    margin-left: 8px;
+}
+
+.confirm-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+.confirm-btn:hover {
+    background-color: #218838;
+}
+
+.cancel-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background-color: #c82333;
+}
+
+.loading-indicator {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+.execution-result {
+    word-break: break-word;
+    margin-top: 1vh;
+    padding: 1vh;
+    border-radius: 4px;
+    font-size: small;
+    background-color: #1f1e1e;
+}
+
+.execution-result.success {
+    border-left: 4px solid #4caf50;
+}
+
+.execution-result.error {
+    border-left: 4px solid #f44336;
+}
+
+.execution-result h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.execution-result pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.confirm-btn:disabled,
+.cancel-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.loading-indicator {
+    margin-top: 12px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

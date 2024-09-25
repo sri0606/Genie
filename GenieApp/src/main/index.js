@@ -8,11 +8,15 @@ import ffprobeStatic from "ffprobe-static";
 import express from "express";
 import fs from 'fs';
 import VideoEditor from './autove.js'; // Load the VideoEditor class
+import {projectMenu ,defaultMenu} from './menuTemplate.js';
+
+// Ensure FFmpeg uses the ffprobe-static binary
+ffmpeg.setFfprobePath(ffprobeStatic.path);
 
 const projectResourcesServer = express();
 const projectResourcesDir = path.join(app.getPath('userData'), 'projects');
 // Create an instance of the VideoEditor
-const videoEditorInstance = new VideoEditor(projectResourcesDir);
+const videoEditorInstance = new VideoEditor();
 
 //Serve media files from the media directory
 projectResourcesServer.use('/media', express.static(projectResourcesDir));
@@ -40,13 +44,15 @@ function createWindow(projectId = null) {
     width: 900,
     height: 670,
     show: false,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
+      devTools: true,
     },
   });
-
+  const menu = projectId ? projectMenu : defaultMenu;
+  mainWindow.setMenu(menu);
   mainWindow.on('ready-to-show', () => {
     mainWindow.show();
   });
@@ -55,7 +61,7 @@ function createWindow(projectId = null) {
     shell.openExternal(details.url);
     return { action: 'deny' };
   });
-
+ mainWindow.webContents.openDevTools();
   // Check if it's dev mode or production and load the appropriate URL
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     if (projectId) {
@@ -77,7 +83,6 @@ function createWindow(projectId = null) {
 }
 
 
-
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.electron');
 
@@ -88,12 +93,14 @@ app.whenReady().then(async () => {
   ipcMain.on('ping', () => console.log('pong'));
 
   try {
+
     let mainWindow = createWindow();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         mainWindow = createWindow();
       }
+
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -145,6 +152,16 @@ ipcMain.handle('create-new-project-id',  () => {
   }
 });
 
+async function getNumberOfFilesInDirectory(directoryPath) {
+    try {
+        const files = await fs.promises.readdir(directoryPath, { withFileTypes: true });
+        return files.filter(file => file.isFile()).length; // Filter out directories, only count files
+    } catch (err) {
+        console.error(`Error reading directory ${directoryPath}:`, err);
+        return 0;
+    }
+}
+
 ipcMain.handle('get-videos-in-project', async (event, projectId) => {
   const projectDir = path.join(projectResourcesDir, projectId); // Construct the project directory path
   try {
@@ -152,9 +169,8 @@ ipcMain.handle('get-videos-in-project', async (event, projectId) => {
 
     const videos = [];
 
-    // Iterate through each directory to find video subdirectories
     for (const dirent of directories) {
-      if (dirent.isDirectory()) {
+    if (dirent.isDirectory()) {
         const videoDir = path.join(projectDir, dirent.name); // Path to the video subdirectory
         const files = await fs.promises.readdir(videoDir, { withFileTypes: true });
 
@@ -162,14 +178,20 @@ ipcMain.handle('get-videos-in-project', async (event, projectId) => {
         const videoFile = files.find(file => file.isFile() && /\.(mp4|webm|ogg)$/.test(file.name));
 
         if (videoFile) {
-          videos.push({
-            name: videoFile.name,
-            url: `http://localhost:3000/media/${projectId}/${dirent.name}/${videoFile.name}`,
-            dirLocation: `http://localhost:3000/media/${projectId}/${dirent.name}`
-          });
+            // Check for the number of edits in the 'edits' subdirectory
+            const editsDir = path.join(videoDir, 'edits');
+            const numEdits = await getNumberOfFilesInDirectory(editsDir); // Count number of files in edits dir
+
+            videos.push({
+                name: videoFile.name,
+                url: `http://localhost:3000/media/${projectId}/${dirent.name}/${videoFile.name}`,
+                dirURL: `http://localhost:3000/media/${projectId}/${dirent.name}`,
+                dirLocation: videoDir,
+                numEdits: numEdits 
+            });
         }
-      }
     }
+}
     return videos;
   } catch (error) {
     console.error('Error reading video files:', error);
@@ -191,6 +213,7 @@ ipcMain.handle('open-project', (event, projectId) => {
 
 
 
+
 ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
@@ -209,8 +232,7 @@ ipcMain.handle('get-project-resources-dir', () => {
 ipcMain.handle('get-project-resources-endpoint', () => {
   return projectResourcesEndpoint;
 });
-// Ensure FFmpeg uses the ffprobe-static binary
-ffmpeg.setFfprobePath(ffprobeStatic.path);
+
 
 ipcMain.handle('generate-thumbnails', async (event, videoPath) => {
   const videoDir = path.dirname(videoPath);
@@ -258,13 +280,65 @@ ipcMain.handle('generate-thumbnails', async (event, videoPath) => {
 
 // Handle user input and execute the function
 ipcMain.handle('user-input', async (event, userInput) => {
-  const response = await extractAndExecute(userInput);
+  const extractionResults = await runExtraction(userInput);
+  // event.reply('bot-response', response); // Emit the bot response event
+  return extractionResults;
+});
+
+ipcMain.handle('execute', async (event, extractedresults,input_path,output_path) => {
+  const response = await runExecution(extractedresults,input_path,output_path);
   // event.reply('bot-response', response); // Emit the bot response event
   return response;
 });
 
+async function runExtraction(userInput){
+      // Send a request to the server to extract functions and their arguments
+    const extractFunctionsResponse = await axios.post('http://localhost:8000/extract', {
+      text: userInput,
+      top_k: 1,
+      threshold: 0.45,
+    });
 
-async function extractAndExecute(userInput) {
+    // Extract the function and its arguments from the response
+    const extractedFunctions = JSON.parse(extractFunctionsResponse.data);
+
+    if (extractedFunctions.length > 0) {
+      const functionName = Object.keys(extractedFunctions[0])[0]; // e.g., "resize_video"
+      const functionArgs = extractedFunctions[0][functionName]; // e.g., {width: 480, height: 720}
+      return {"functionName":functionName,"functionArgs":functionArgs}
+    }
+    else{
+      return null;
+    }
+}
+
+async function runExecution(extractionResults, input_path, output_path){
+
+  let results = [];
+  try{
+    const functionName = extractionResults.functionName; // e.g., "resize_video"
+    const functionArgs = extractionResults.functionArgs; // e.g., {width: 480, height: 720}
+    functionArgs["input_path"]=input_path;
+    functionArgs["output_path"]=output_path;
+
+    console.log("argssss", functionArgs);
+    // Check if the method exists on the instance
+    if (typeof videoEditorInstance[functionName] === 'function') {
+      // Call the method on the class instance
+      const result = await executeFunction(functionName, functionArgs);
+      return result;
+    } else {
+      results.push(`Function ${functionName} not found`);
+    }
+
+
+  } catch (error) {
+    console.error('Error in extractAndExecute:', error);
+    return {status:"error",message:`Error: ${error.message}`};
+  }
+}
+
+async function extractAndExecute(userInput,input_path,output_path) {
   try {
     // Send a request to the server to extract functions and their arguments
     const extractFunctionsResponse = await axios.post('http://localhost:8000/extract', {
@@ -278,20 +352,21 @@ async function extractAndExecute(userInput) {
     console.log('Extracted functions:', extractedFunctions);
 
     let results = [];
-    // Iterate over the extracted functions and execute each one
-    for (const extractedFunction of extractedFunctions) {
-      const functionName = Object.keys(extractedFunction)[0]; // e.g., "resize_video"
-      const functionArgs = extractedFunction[functionName]; // e.g., {width: 480, height: 720}
 
-      // Check if the method exists on the instance
-      if (typeof videoEditorInstance[functionName] === 'function') {
-        // Call the method on the class instance
-        const result = await executeFunction(functionName, functionArgs);
-        results.push(`${functionName}: ${result}`);
-      } else {
-        results.push(`Function ${functionName} not found`);
-      }
+    const functionName = Object.keys(extractedFunctions[0])[0]; // e.g., "resize_video"
+    const functionArgs = extractedFunctions[0][functionName]; // e.g., {width: 480, height: 720}
+    functionArgs["input_path"]=input_path;
+    functionArgs["output_path"]=output_path;
+
+    // Check if the method exists on the instance
+    if (typeof videoEditorInstance[functionName] === 'function') {
+      // Call the method on the class instance
+      const result = await executeFunction(functionName, functionArgs);
+      results.push(`${functionName}: ${result}`);
+    } else {
+      results.push(`Function ${functionName} not found`);
     }
+
     return results.join('\n');
   } catch (error) {
     console.error('Error in extractAndExecute:', error);

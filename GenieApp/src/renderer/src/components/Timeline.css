@@ -5,8 +5,8 @@
     width: 100%;
     scroll-behavior: smooth;
     position: relative;
-    height: 25vh;
-    background-color: #fff;
+    height: 25%;
+    background-color: #c6c2c2;
     border-radius: 2vh;
 }
 
@@ -14,27 +14,27 @@
     position: relative;
     display: flex;
     flex-direction: row;
-    margin-bottom: 9vh;
+    height:28%;
+    margin-bottom: 2%;
 }
 
 .thumbnail-container {
-    height: 20vh;
+    position: relative;
+    height: 70%;
     width: 100%;
+    padding:0;
 }
 
 .thumbnail-button {
     position: absolute;
-    height: 15vh;
+    height: 100%;
     object-fit: scale-down;
-    border-right: 4px solid #ddd;
     background-size: contain;
     /* Fit image within the div */
     background-repeat: no-repeat;
     background-position: center;
     border: none;
-    padding: 0;
     cursor: pointer;
-    border-radius: 1vh;
 }
 
 .current-time-indicator {

@@ -30,28 +30,36 @@ const Timeline = ({ reactPlayerRef, currentVideoDir, thumbnailsGenerated }) => {
         const player = reactPlayerRef.current;
 
         const updateDuration = () => {
-        const videoDuration = player?.getDuration();
-        if (videoDuration) {
-            setDuration(videoDuration);
-        }
+            const videoDuration = player?.getDuration();
+            if (videoDuration && videoDuration !== duration) {
+                setDuration(videoDuration);
+                console.log("Updated duration:", videoDuration);  // For debugging
+            }
         };
 
         if (player) {
-        updateDuration();
-        const internalPlayer = player.getInternalPlayer();
-        
-        if (internalPlayer) {
-            internalPlayer.addEventListener('loadedmetadata', updateDuration);
+            // Call updateDuration immediately and set up an interval to keep checking
+            updateDuration();
+            const durationCheckInterval = setInterval(updateDuration, 1000);
 
-            return () => {
-            // Check if internalPlayer still exists before removing the listener
+            const internalPlayer = player.getInternalPlayer();
+            
             if (internalPlayer) {
-                internalPlayer.removeEventListener('loadedmetadata', updateDuration);
+                internalPlayer.addEventListener('loadedmetadata', updateDuration);
+                internalPlayer.addEventListener('durationchange', updateDuration);
+
+                return () => {
+                    clearInterval(durationCheckInterval);
+                    if (internalPlayer) {
+                        internalPlayer.removeEventListener('loadedmetadata', updateDuration);
+                        internalPlayer.removeEventListener('durationchange', updateDuration);
+                    }
+                };
             }
-            };
+
+            return () => clearInterval(durationCheckInterval);
         }
-        }
-    }, [reactPlayerRef, currentVideoDir]);
+    }, [reactPlayerRef, currentVideoDir, duration]);
 
     // Generate thumbnails when projectURL or thumbnailsGenerated changes
     useEffect(() => {
@@ -99,7 +107,7 @@ const Timeline = ({ reactPlayerRef, currentVideoDir, thumbnailsGenerated }) => {
                 className="thumbnail-button"
                 style={{
                     left: `${timeIndex * pixelsPerSecond + leftStarting}px`,
-                    width: `${majorMarkerInterval * pixelsPerSecond}px`,
+                    width: `${majorMarkerInterval * pixelsPerSecond-1}px`,
                     backgroundColor: imageError ? '#cccccc' : 'transparent',
                     backgroundImage: !imageError ? `url(${getThumbnailURL(timeIndex)})` : 'none',
                 }}
