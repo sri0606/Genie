@@ -38,7 +38,7 @@ const api = {
   receiveBotResponse: (callback) => electronAPI.ipcRenderer.on('bot-response', (event, response) => callback(response)),
   removeAllListeners: (channel) => electronAPI.ipcRenderer.removeAllListeners(channel),
   sendUserInput: (message,input_path, output_path) => electronAPI.ipcRenderer.invoke('user-input', message, input_path, output_path),
-  executeFunction: (extractedResults,input_path,output_path) => electronAPI.ipcRenderer.invoke('execute',extractedResults,input_path,output_path),
+  executeFunction: (extractedResults,paths) => electronAPI.ipcRenderer.invoke('execute',extractedResults,paths),
   pathJoinURL:(url,...vals)=> url + '/' + vals.join('/'),
   handleUpload: async (projectDataDir, projectURL) => {
     const filePath = await api.openFileDialog();
@@ -50,7 +50,8 @@ const api = {
       const workingDir = api.pathJoin(projectDataDir, fileBaseName);
       await api.ensureDirExists(workingDir);
       await api.ensureDirExists(api.pathJoin(projectDataDir, fileBaseName, "edits"));
-
+      await api.ensureDirExists(api.pathJoin(projectDataDir, fileBaseName, "edits","video"));
+      await api.ensureDirExists(api.pathJoin(projectDataDir, fileBaseName, "edits","audio"));
       const destinationPath = api.pathJoin(workingDir, fileName);
       await api.copyFile(filePath, destinationPath);
       console.log('File copied to:', destinationPath);
@@ -60,8 +61,10 @@ const api = {
         url: api.pathJoinURL(projectURL, fileBaseName, fileName), 
         dirLocation: api.pathJoin(projectDataDir, fileBaseName),
         dirURL : api.pathJoinURL(projectURL, fileBaseName),
-        numEdits: 0
+        numVideoEdits: 0,
+        numAudioEdits: 0,
       };
+      electronAPI.ipcRenderer.invoke('extract-audio', destinationPath);
       return {newVideo,destinationPath};
     }
   },

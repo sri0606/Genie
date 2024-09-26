@@ -59,9 +59,19 @@ async def extract(request:FunctionsRequest):
     extracted_functions_args = []
     for function in functions_list:
         if function in FUNCTION_ARG_TYPES:
-            extracted_functions_args.append(dispatcher.extract_parameters(query_text=request.text,
-                                            functions_args_description={function: FUNCTION_ARG_TYPES[function]}
-                                        ))
+            # Extract parameters
+            extracted_params = dispatcher.extract_parameters(
+                query_text=request.text,
+                functions_args_description={function: FUNCTION_ARG_TYPES[function]}
+            )
+            
+            # Add missing parameters with default value (None, 'Not found', etc.)
+            for param, param_type in FUNCTION_ARG_TYPES[function].items():
+                if param not in extracted_params[function]:
+                    extracted_params[function][param] = None  # or 'Not found' or any default value you prefer
+            
+            extracted_functions_args.append(extracted_params)
+
     return json.dumps(extracted_functions_args)
 
 

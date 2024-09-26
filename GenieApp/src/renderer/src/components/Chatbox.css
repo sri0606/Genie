@@ -13,6 +13,7 @@
     flex: 1;
     padding: 2vh;
     overflow-y: auto;
+    scroll-behavior: smooth;
     display: flex;
     flex-direction: column;
 }
@@ -22,16 +23,17 @@
     margin-bottom: 1vh;
     border-radius: 2vh;
     box-sizing: border-box;
-    background-color: #2f2d2d;
+    /* background-color: #2f2d2d; */
     padding: 1vh;
     word-wrap: break-word;
-    /* max-width: 90%; */
+    max-width: 80%;
     /* Ensure long words break to the next line */
 }
 
 .chatbox-message.user {
     align-self: flex-end;
     text-align: right;
+    background: transparent;
 }
 
 .chatbox-message.bot {
@@ -43,34 +45,71 @@
     padding: 1vh;
     border-radius: 4vh;
     display: flex;
-    justify-content: space-between;
-    flex-direction: row;
+    /* justify-content: space-between; */
+    align-items: center;
+    gap: 10px;
+    position: relative;
 }
 
-.chatbox-input input {
-    width: 95%;
-    padding: 1vh;
-    border-radius: 4vh;
-    box-sizing: border-box;
+.input-wrapper {
+    display: flex;
+    align-items: flex-end;
+    position: relative;
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 5px;
+    background-color: white;
+    z-index: 0;
+}
+
+.chatbox-textarea {
+    flex: 1;
+    border: none;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 8px;
+    resize: none;
+    max-height: 200px; /* Max height before scrolling */
+    overflow-y: auto;
+    outline: none;
+    z-index: 1;
+    transition: height 0.2s ease;
+}
+
+.chatbox-textarea:disabled {
+    background-color: #f2f2f2;
 }
 
 .send-btn {
     background-color: #007bff;
     color: white;
     border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 10px 15px;
     cursor: pointer;
-    font-size: 18px;
-    transition: background-color 0.2s;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+    align-self: flex-end; /* Align button to the bottom of the input */
 }
 
-.send-btn:hover {
-    background-color: #0056b3;
+.send-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.loading-indicator {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #ccc;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.auto-mode {
+    margin-left: 10px;
+    font-size: 14px;
 }
 
 .bot-message {
@@ -135,17 +174,6 @@
     background-color: #c82333;
 }
 
-.loading-indicator {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    width: 20px;
-    height: 20px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #3498db;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
 .execution-result {
     word-break: break-word;
     margin-top: 1vh;
@@ -184,10 +212,11 @@
     cursor: not-allowed;
 }
 
-.loading-indicator {
-    margin-top: 12px;
-}
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }

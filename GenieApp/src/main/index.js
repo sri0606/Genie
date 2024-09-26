@@ -291,6 +291,23 @@ ipcMain.handle('execute', async (event, extractedresults,input_path,output_path)
   return response;
 });
 
+ipcMain.handle("extract-audio", async (event, input_path) => {
+    try {
+        // Extract the base name without extension
+        const output_path = path.join(
+            path.dirname(input_path),
+            path.basename(input_path, path.extname(input_path)) + ".mp3"
+        );
+        
+        // Call the extract_audio_from_video method
+        const result = await videoEditorInstance.extract_audio_from_video(input_path, output_path);
+        return result; // return the result back to renderer
+    } catch (error) {
+        console.error("Error during audio extraction:", error);
+        throw error; // handle error as needed
+    }
+});
+
 async function runExtraction(userInput){
       // Send a request to the server to extract functions and their arguments
     const extractFunctionsResponse = await axios.post('http://localhost:8000/extract', {
@@ -312,14 +329,13 @@ async function runExtraction(userInput){
     }
 }
 
-async function runExecution(extractionResults, input_path, output_path){
+async function runExecution(extractionResults, paths){
 
   let results = [];
   try{
     const functionName = extractionResults.functionName; // e.g., "resize_video"
     const functionArgs = extractionResults.functionArgs; // e.g., {width: 480, height: 720}
-    functionArgs["input_path"]=input_path;
-    functionArgs["output_path"]=output_path;
+    functionArgs["paths"]=paths;
 
     console.log("argssss", functionArgs);
     // Check if the method exists on the instance
@@ -335,42 +351,6 @@ async function runExecution(extractionResults, input_path, output_path){
   } catch (error) {
     console.error('Error in extractAndExecute:', error);
     return {status:"error",message:`Error: ${error.message}`};
-  }
-}
-
-async function extractAndExecute(userInput,input_path,output_path) {
-  try {
-    // Send a request to the server to extract functions and their arguments
-    const extractFunctionsResponse = await axios.post('http://localhost:8000/extract', {
-      text: userInput,
-      top_k: 1,
-      threshold: 0.45,
-    });
-
-    // Extract the function and its arguments from the response
-    const extractedFunctions = JSON.parse(extractFunctionsResponse.data);
-    console.log('Extracted functions:', extractedFunctions);
-
-    let results = [];
-
-    const functionName = Object.keys(extractedFunctions[0])[0]; // e.g., "resize_video"
-    const functionArgs = extractedFunctions[0][functionName]; // e.g., {width: 480, height: 720}
-    functionArgs["input_path"]=input_path;
-    functionArgs["output_path"]=output_path;
-
-    // Check if the method exists on the instance
-    if (typeof videoEditorInstance[functionName] === 'function') {
-      // Call the method on the class instance
-      const result = await executeFunction(functionName, functionArgs);
-      results.push(`${functionName}: ${result}`);
-    } else {
-      results.push(`Function ${functionName} not found`);
-    }
-
-    return results.join('\n');
-  } catch (error) {
-    console.error('Error in extractAndExecute:', error);
-    return `Error: ${error.message}`;
   }
 }
 
