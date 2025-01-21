@@ -31,8 +31,6 @@ export default function App() {
       <ProjectPage 
         key = {currentProjectId}
         projectId={currentProjectId}
-        projectURL={window.api.pathJoinURL(projectsResourcesEndpoint, currentProjectId)}
-        projectDataDir={window.api.pathJoin(projectsResourcesDir, currentProjectId)}
       />
     );
   }

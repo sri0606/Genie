@@ -28,15 +28,12 @@ export default function Homepage() {
   }, [appDataDirectory]);
 
   const createNewProject = async () => {
-    const projectId = await window.api.createNewProjectId();
-    console.log(projectId);
-    const projectDir = window.api.pathJoin(appDataDirectory, projectId);
-    window.api.ensureDirExists(projectDir);
+    const project = await window.api.createNewProject(appDataDirectory);
 
     // Update state to include the new project
-    setProjects([...projects, { id: projectId, name: `Project ${projectId}` }]);
+    setProjects([...projects, { id: project.id, name: `Project ${project.id}` }]);
     
-    window.api.openProject(projectId);
+    window.api.openProject(project.id);
   };
 
   const openProject = (projectId) => {

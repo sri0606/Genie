@@ -29,7 +29,12 @@ function triggerUploadInRenderer() {
     win.webContents.send('upload-menu-clicked');
   }
 }
-
+function triggerSaveInRenderer() {
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) {
+    win.webContents.send('save-project');
+  }
+}
 function triggerGoToHome(){
      const win = BrowserWindow.getFocusedWindow();
   if (win) {
@@ -53,6 +58,13 @@ const projectMenuTemplate = [
         click: () => {
           // Trigger upload in the renderer process
           triggerGoToHome();
+        }
+    },
+    {
+      label: 'Save Project',
+      click: () => {
+          // Trigger upload in the renderer process
+          triggerSaveInRenderer();
         }
     },
       { role: 'quit' }

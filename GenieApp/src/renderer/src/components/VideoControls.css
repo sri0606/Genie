@@ -1,0 +1,96 @@
+.row-one{
+    display: flex;
+    flex-direction: row;
+    width:100%;
+    height:45%;
+    gap:2vw;
+}
+
+.video-viewport-container {
+    width: 75%;
+    /* aspect-ratio: 16 / 9; */
+    height: 100%;
+    margin-bottom: 1rem;
+    border-radius: 2vh;
+    background-color: #000000;
+  }
+  
+  .video-viewport {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .no-video {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    background-color: #f0f0f0;
+    color: #666;
+    font-size: 1.2rem;
+  }
+  
+  .video-controls-btns-row {
+    display: flex;
+    width:auto !important;
+    justify-content: center; /* Center the buttons horizontally */
+    align-items: center; /* Center vertically (if necessary) */
+    background-color: rgb(23, 23, 23);
+    padding: 1vh;
+    border-radius: 2vh;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.control-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem; /* Adjusted for a bigger button by default */
+    background: transparent;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, margin 0.2s ease;
+    font-size: 1rem;
+    white-space: nowrap;
+}
+
+.control-button:hover {
+    background-color: #000000;
+    transform: scale(1.2); /* Enlarges more to push elements */
+    margin: 0 0.75rem; /* Adds margin on hover to push neighbors */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5); /* Stronger shadow */
+}
+
+.control-button:active {
+    transform: scale(1.15); /* Slightly less scale when clicked */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25); /* Slightly smaller shadow when clicked */
+}
+
+.control-button .icon {
+    font-size: 1.2rem;
+}
+
+  
+  /* .cut-button { background-color: #e74c3c; }
+  .cut-button:hover { background-color: #c0392b; }
+  
+  .split-button { background-color: #f39c12; }
+  .split-button:hover { background-color: #d35400; }
+  
+  .undo-button, .redo-button { background-color: #2ecc71; }
+  .undo-button:hover, .redo-button:hover { background-color: #27ae60; } */
+  
+
+  
+  .cut-marker {
+    background-color: #e74c3c;
+  }
+  
+  .split-marker {
+    background-color: #f39c12;
+  }

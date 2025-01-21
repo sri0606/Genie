@@ -1,0 +1,93 @@
+{
+    "resize_video": {
+        "description": "Resize a video to specified width and height",
+        "examples": ["resize video to 1280x720", "change resolution to 1920x1080", "resize video dimensions"],
+        "args": {
+            "width": {
+                "type": "int",
+                "required": true
+            },
+            "height": {
+                "type": "int",
+                "required": true
+            }
+        }
+    },
+    "convert_video_format": {
+        "description": "Convert a video to a specified format",
+        "examples": ["convert video to mp4", "change format to avi", "convert video to mkv"],
+        "args": {
+            "format": {
+                "type": "str",
+                "required": true
+            }
+        }
+    },
+    "extract_audio_from_video": {
+        "description": "Extract audio from the video and save as MP3",
+        "examples": ["extract audio", "save audio from video", "get sound from video"],
+        "args": {}
+    },
+    "trim_video": {
+        "description": "Trim a video between the specified start and end time",
+        "examples": ["trim video from 00:30 to 01:30", "cut video from 10s to 50s", "trim 5 minutes of video"],
+        "args": {
+            "start_time": {
+                "type": "float",
+                "required": true
+            },
+            "end_time": {
+                "type": "float",
+                "required": true
+            }
+        }
+    },
+    "compress_video": {
+        "description": "Compress the video with a specified preset",
+        "examples": ["compress video using fast preset", "reduce video size", "compress video to save space"],
+        "args": {
+            "preset": {
+                "type": "str",
+                "required": false
+            }
+        }
+    },
+    "apply_basic_color_correction": {
+        "description": "Apply basic color correction to a video (brightness, contrast, saturation)",
+        "examples": ["increase brightness by 0.5", "reduce contrast", "adjust video saturation to 1.5"],
+        "args": {
+            "brightness": {
+                "type": "float",
+                "required": false
+            },
+            "contrast": {
+                "type": "float",
+                "required": false
+            },
+            "saturation": {
+                "type": "float",
+                "required": false
+            }
+        }
+    },
+    "change_aspect_ratio": {
+        "description": "Change the aspect ratio of the video",
+        "examples": ["change aspect ratio to 16:9", "set video to 4:3 aspect ratio", "adjust aspect ratio to 21:9"],
+        "args": {
+            "aspect_ratio": {
+                "type": "str",
+                "required": true
+            }
+        }
+    },
+    "apply_slow_motion": {
+        "description": "Apply slow motion effect to a video",
+        "examples": ["slow down video by 50%", "apply slow motion effect", "reduce video speed to 0.5x"],
+        "args": {
+            "speed": {
+                "type": "float",
+                "required": false
+            }
+        }
+    }
+}

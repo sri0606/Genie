@@ -1,11 +1,12 @@
-from fastapi import FastAPI,Body
-from typing import Any,Optional
+from fastapi import FastAPI
+from typing import Any,Optional, Dict
 from pydantic import BaseModel
 import json
-from text_to_action import ActionDispatcher
+import os
+from text_to_action import TextToAction, LLMClient, create_actions_embeddings
 from dotenv import load_dotenv
-from functions_metadata import FUNCTION_ARG_TYPES
 load_dotenv()
+
 
 class FunctionsRequest(BaseModel):
     text: str
@@ -14,66 +15,51 @@ class FunctionsRequest(BaseModel):
 
 class ArgumentsRequest(BaseModel):
     text: str
-    functions_args_dict:Any = Body(...)
+    action_name: str
+    args: Dict[str,Dict[str,Any]]
 
 app = FastAPI()
 
-dispatcher = ActionDispatcher(action_embedding_filename="autove.h5",actions_filepath=None,
-                                use_llm_extract_parameters=True,verbose_output=True)
+llm_client = LLMClient(model="groq/llama3-70b-8192")
+current_directory = os.path.dirname(os.path.abspath(__file__))
+autove_actions_folder = os.path.join(current_directory,"autove")
 
+dispatcher = TextToAction(actions_folder = autove_actions_folder, llm_client=llm_client,
+                            verbose_output=True,application_context="Video Editing", filter_input=True)
 
-@app.post("/extract_functions")
-async def extract_functions(request:FunctionsRequest):
-    functions_list =  dispatcher.extract_functions(query_text=request.text,
+@app.post("/extract_actions")
+async def extract_actions(request:FunctionsRequest):
+    result =  dispatcher.extract_actions(query_text=request.text,
                                     top_k=request.top_k,threshold=request.threshold)
-    functions_args = {}
-    for function in functions_list:
-        if function in FUNCTION_ARG_TYPES:
-            functions_args[function] = FUNCTION_ARG_TYPES[function]
-    return json.dumps(functions_args)
+
+    return json.dumps(result)
 
 @app.post("/extract_arguments")
 async def extract_arguments(request:ArgumentsRequest):
+    result = dispatcher.extract_parameters(query_text=request.text, action_name=request.action_name, args = request.args)
 
-    if isinstance(request.functions_args_dict, str):
-        try:
-            functions_args_dict = json.loads(request.functions_args_dict)
-        except json.JSONDecodeError:
-            return {"error": "Invalid JSON for functions_args_dict"}
-    else:
-        functions_args_dict = request.functions_args_dict
-    
-    if isinstance(functions_args_dict, dict):
-        return dispatcher.extract_parameters(query_text=request.text,
-                                         functions_args_description=functions_args_dict
-                                    )
-    else:
-        return json.dumps(dispatcher.extract_parameters(query_text=request.text,
-                                            functions_args_description=functions_args_dict
-                                        ))
+    return json.dumps(result)
          
-@app.post("/extract")
-async def extract(request:FunctionsRequest):
-    functions_list =  dispatcher.extract_functions(query_text=request.text,
+@app.post("/extract_actions_with_args")
+async def extract_actions_with_args(request:FunctionsRequest):
+    result =  dispatcher.extract_actions_with_args(query_text=request.text,
                                     top_k=request.top_k,threshold=request.threshold)
-    extracted_functions_args = []
-    for function in functions_list:
-        if function in FUNCTION_ARG_TYPES:
-            # Extract parameters
-            extracted_params = dispatcher.extract_parameters(
-                query_text=request.text,
-                functions_args_description={function: FUNCTION_ARG_TYPES[function]}
-            )
-            
-            # Add missing parameters with default value (None, 'Not found', etc.)
-            for param, param_type in FUNCTION_ARG_TYPES[function].items():
-                if param not in extracted_params[function]:
-                    extracted_params[function][param] = None  # or 'Not found' or any default value you prefer
-            
-            extracted_functions_args.append(extracted_params)
 
-    return json.dumps(extracted_functions_args)
+    return json.dumps(result)
 
+@app.post("/run")
+async def run( request:FunctionsRequest):
+    result =  dispatcher.run(query_text=request.text,
+                                    top_k=request.top_k,threshold=request.threshold)
+
+    return json.dumps(result)
+
+def update_embeddings():
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    descriptions_filepath = os.path.join(current_directory, "autove", "descriptions.json")
+    save_to = os.path.join(current_directory, "autove", "embeddings.h5")
+
+    create_actions_embeddings(descriptions_filepath, save_to=save_to,validate_data=True)
 
 if __name__ == "__main__":
     import uvicorn

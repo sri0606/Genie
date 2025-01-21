@@ -84,3 +84,57 @@
 .timeline-container {
     scrollbar-width: none;
 }
+
+.clip-selection-area {
+    position: absolute;
+    top: 30px;
+    left: 15px;
+    right: 15px;
+    height: 50px;
+    cursor: pointer;
+}
+
+.selected-clip {
+    position: absolute;
+    height: 100%;
+    background-color: rgba(0, 123, 255, 0.3);
+    border: 2px solid rgba(0, 123, 255, 0.5);
+    z-index: 5;
+}
+
+.clip-handle {
+    position: absolute;
+    top: 0;
+    width: 10px;
+    height: 100%;
+    background-color: #0056b3;
+    cursor: ew-resize;
+}
+
+.start-handle {
+    left: -5px;
+}
+
+.end-handle {
+    right: -5px;
+}
+
+.clip-handle::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+}
+
+.start-handle::before {
+    border-right: 6px solid white;
+}
+
+.end-handle::before {
+    border-left: 6px solid white;
+}

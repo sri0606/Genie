@@ -129,13 +129,6 @@ app.on('window-all-closed', async () => {
 
 
 // IPC handlers
-ipcMain.handle('create-new-project-id',  () => {
-  const timestamp = Date.now(); // Current time in milliseconds
-  const randomComponent = Math.random().toString(36).substr(2, 5); // Random string
-  const newProjectId = `${timestamp}-${randomComponent}`; // Unique ID based on timestamp and random string
-  // Save the new project with this ID to your database or storage
-  return newProjectId;
-});
 
   ipcMain.handle('get-projects', async () => {
   try {
@@ -239,10 +232,6 @@ ipcMain.handle('generate-thumbnails', async (event, videoPath) => {
   const thumbnailDir = path.join(videoDir, 'thumbnails');
 
   try {
-    // Check if the 'thumbnails' directory exists
-    await fs.promises.access(thumbnailDir, fs.constants.F_OK)
-      .catch(() => fs.promises.mkdir(thumbnailDir, { recursive: true }));
-
     // Get video duration using ffprobe
     const { duration } = await new Promise((resolve, reject) => {
       ffmpeg.ffprobe(videoPath, (err, metadata) => {
@@ -296,12 +285,12 @@ ipcMain.handle("extract-audio", async (event, input_path) => {
         // Extract the base name without extension
         const output_path = path.join(
             path.dirname(input_path),
-            path.basename(input_path, path.extname(input_path)) + ".mp3"
+            path.basename(input_path, path.extname(input_path))
         );
-        
+        const paths = {video: {input: input_path, output: null}, audio:{input:null, output:output_path}}
         // Call the extract_audio_from_video method
-        const result = await videoEditorInstance.extract_audio_from_video(input_path, output_path);
-        return result; // return the result back to renderer
+        const result = await videoEditorInstance.extract_audio_from_video(paths);
+        return result.paths.audio.output; // return the result back to renderer
     } catch (error) {
         console.error("Error during audio extraction:", error);
         throw error; // handle error as needed
@@ -310,49 +299,56 @@ ipcMain.handle("extract-audio", async (event, input_path) => {
 
 async function runExtraction(userInput){
       // Send a request to the server to extract functions and their arguments
-    const extractFunctionsResponse = await axios.post('http://localhost:8000/extract', {
+    const extractFunctionsResponse = await axios.post('http://localhost:8000/extract_actions_with_args', {
       text: userInput,
       top_k: 1,
       threshold: 0.45,
     });
-
     // Extract the function and its arguments from the response
-    const extractedFunctions = JSON.parse(extractFunctionsResponse.data);
-
-    if (extractedFunctions.length > 0) {
-      const functionName = Object.keys(extractedFunctions[0])[0]; // e.g., "resize_video"
-      const functionArgs = extractedFunctions[0][functionName]; // e.g., {width: 480, height: 720}
-      return {"functionName":functionName,"functionArgs":functionArgs}
-    }
-    else{
-      return null;
-    }
+    const result = JSON.parse(extractFunctionsResponse.data);
+    return result;
 }
 
-async function runExecution(extractionResults, paths){
+async function runExecution(action, paths) {
 
-  let results = [];
-  try{
-    const functionName = extractionResults.functionName; // e.g., "resize_video"
-    const functionArgs = extractionResults.functionArgs; // e.g., {width: 480, height: 720}
-    functionArgs["paths"]=paths;
+  try {
+    const functionName = action.action; // e.g., "add", "resize_video"
+    const functionArgs = action.args; // e.g., {values: [3, 4]} or {width: 480, height: 720}
+    
+    // Add paths to function arguments if necessary
+    functionArgs["paths"] = paths;
 
-    console.log("argssss", functionArgs);
+    console.log(`Executing function: ${functionName} with args:`, functionArgs);
+
+    
     // Check if the method exists on the instance
     if (typeof videoEditorInstance[functionName] === 'function') {
       // Call the method on the class instance
       const result = await executeFunction(functionName, functionArgs);
       return result;
     } else {
-      results.push(`Function ${functionName} not found`);
+
+      return {
+        status: 'error', 
+        message: `Function ${functionName} not found`,
+        videoEdited: false,
+        audioEdited: false,
+        paths: paths
+      };
     }
 
-
   } catch (error) {
-    console.error('Error in extractAndExecute:', error);
-    return {status:"error",message:`Error: ${error.message}`};
+    console.error('Error in runExecution:', error);
+    return {status: "error", 
+        message: `Error: ${error.message}`,
+        videoEdited: false,
+        audioEdited: false,
+        paths: paths};
   }
+
 }
+
+
 
 // Execute the function with its arguments on the instance
 async function executeFunction(functionName, functionArgs) {
